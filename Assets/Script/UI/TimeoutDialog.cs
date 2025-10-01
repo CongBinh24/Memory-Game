@@ -1,18 +1,30 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
 
 public class TimeoutDialog : Dialog
 {
-    // Start is called before the first frame update
-    void Start()
+   public void BackToMenu()
     {
-        
+        if(SceneController.Ins)
+            SceneController.Ins.LoadCurrentScene();
     }
 
-    // Update is called once per frame
-    void Update()
+    public void Replay()
     {
-        
+        SceneManager.sceneLoaded += OnSceneLoadEvent;
+        if (SceneController.Ins)
+            SceneController.Ins.LoadCurrentScene();
+    }
+
+    private void OnSceneLoadEvent(Scene scene, LoadSceneMode mode)
+    {
+        if (GameManager.Ins)
+            GameManager.Ins.PlayGame();
+
+        SceneManager.sceneLoaded -= OnSceneLoadEvent;
+
     }
 }

@@ -34,19 +34,40 @@ public class GameManager : Singleton<GameManager>
     public override void Start()
     {
         base.Start();
-        GenerateMatchItems();
+        if (AudioController.Ins)
+            AudioController.Ins.PlayBackgroundMusic();
     }
 
     private void Update()
     {
+        if (state != GameState.Playing) return;
+
         m_timeCounting -= Time.deltaTime;
 
         if(m_timeCounting <= 0 && state != GameState.Timeout)
         {
             state = GameState.Timeout;
             m_timeCounting = 0;
+            if (GUIManager.Ins)
+                GUIManager.Ins.timeoutDialog.Show(true);
+
+            if(AudioController.Ins)
+                AudioController.Ins.PlaySound(AudioController.Ins.timeOut);
         }
+
+        if (GUIManager.Ins)
+            GUIManager.Ins.UpdateTimeBar((float)m_timeCounting, (float)timeLimit);
     }
+
+    public void PlayGame()
+    {
+        Debug.Log("Start");
+        state = GameState.Playing;
+        GenerateMatchItems();
+        if (GUIManager.Ins)
+            GUIManager.Ins.ShowGameplay(true);  
+    }
+
     private void GenerateMatchItems()
     {
         if (matchItems == null || matchItems.Length <= 0 || itemUIPb == null || gridRoot == null) return;
@@ -120,6 +141,9 @@ public class GameManager : Singleton<GameManager>
                     var answer = m_answers[i];
                     if (answer)
                         answer.ExplodeAnimTrigger();
+
+                    if (AudioController.Ins)
+                        AudioController.Ins.PlaySound(AudioController.Ins.right);
                 }
             }
             else
@@ -129,6 +153,9 @@ public class GameManager : Singleton<GameManager>
                     var answer = m_answers[i];
                     if (answer)
                         answer.OpenAnimTrigger();
+
+                    if (AudioController.Ins)
+                        AudioController.Ins.PlaySound(AudioController.Ins.wrong);
                 }
             }
         }
@@ -136,8 +163,14 @@ public class GameManager : Singleton<GameManager>
         m_answers.Clear();
         m_isAnswerChecking = false;
 
-        if (m_rightMoving == m_totalMatchItem)
+        if (m_rightMoving == m_totalMatchItem) // doan dung
         {
+            Pref.bestMove = m_totalMoving;
+            if (GUIManager.Ins)
+                GUIManager.Ins.gameoverDialog.Show(true);
+
+            if (AudioController.Ins)
+                AudioController.Ins.PlaySound(AudioController.Ins.gameover);
             Debug.Log("Gameover!!");
         }
     }

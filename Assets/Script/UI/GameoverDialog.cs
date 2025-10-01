@@ -1,18 +1,39 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
 
 public class GameoverDialog : Dialog
 {
-    // Start is called before the first frame update
-    void Start()
+    public Text totalMoveTxt;
+    public Text bestMoveTxt;
+
+    public override void Show(bool isShow)
     {
-        
+        base.Show(isShow);
+
+        if(totalMoveTxt && GameManager.Ins)
+            totalMoveTxt.text = GameManager.Ins.TotalMoving.ToString();
+
+        if (bestMoveTxt)
+            bestMoveTxt.text = Pref.bestMove.ToString();
     }
 
-    // Update is called once per frame
-    void Update()
+    public void Continue()
     {
-        
+        SceneManager.sceneLoaded += OnSceneLoadEvent;
+        if (SceneController.Ins)
+            SceneController.Ins.LoadCurrentScene();
+    }
+
+    private void OnSceneLoadEvent(Scene scene, LoadSceneMode mode)
+    {
+        if (GameManager.Ins)
+            GameManager.Ins.PlayGame();
+
+        SceneManager.sceneLoaded -= OnSceneLoadEvent;
+
     }
 }

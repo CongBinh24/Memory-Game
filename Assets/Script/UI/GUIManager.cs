@@ -25,7 +25,7 @@ public class GUIManager : Singleton<GUIManager>
             gamePlay.SetActive(isShow);
 
         if(mainMenu)
-            gamePlay.SetActive(!isShow);
+            mainMenu.SetActive(!isShow);
     }
 
     public void UpdateTimeBar(float curTime, float totalTime)
