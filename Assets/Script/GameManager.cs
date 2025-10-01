@@ -1,22 +1,22 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : Singleton<GameManager>
 {
     public int timeLimit;
-    public MatchItem[] matchItems;
+    public MatchItem[] matchItems; // mảng lá bài gốc 
     public MatchItemUI itemUIPb;
     public Transform gridRoot;
     public GameState state;
     private List<MatchItem> m_matchItemsCopy; // data, Game dung de random, shuffle khong hien thi tren man hinh
     private List<MatchItemUI> m_matchItemUIs; // the bai that nguoi choi thay tren man hinh
-    private List<MatchItemUI> m_answers;
+    private List<MatchItemUI> m_answers; // 2 lá người chơi vừa chọn.
     private float m_timeCounting;
-    private int m_totalMatchItem;
-    private int m_totalMoving;
-    private int m_rightMoving;
-    private bool m_isAnswerChecking;
+    private int m_totalMatchItem;//số lượng lá bài gốc
+    private int m_totalMoving; // tổng số lượt chọn
+    private int m_rightMoving; // tổng số cặp đúng
+    private bool m_isAnswerChecking; // flag để tránh bấm thêm khi đang so sánh
 
     public int TotalMoving { get => m_totalMoving;}
     public int RightMoving { get => m_rightMoving;}
@@ -31,6 +31,22 @@ public class GameManager : Singleton<GameManager>
         state = GameState.Starting;
     }
 
+    public override void Start()
+    {
+        base.Start();
+        GenerateMatchItems();
+    }
+
+    private void Update()
+    {
+        m_timeCounting -= Time.deltaTime;
+
+        if(m_timeCounting <= 0 && state != GameState.Timeout)
+        {
+            state = GameState.Timeout;
+            m_timeCounting = 0;
+        }
+    }
     private void GenerateMatchItems()
     {
         if (matchItems == null || matchItems.Length <= 0 || itemUIPb == null || gridRoot == null) return;
@@ -39,10 +55,10 @@ public class GameManager : Singleton<GameManager>
         int divItem = totalItem % 2;
         m_totalMatchItem = totalItem - divItem;
 
-        for (int i = 0; i < m_totalMatchItem; i++) 
+        for (int i = 0; i < m_totalMatchItem; i++) // duyệt qua từng lá bài gốc và gán Id
         {
             var matchItem = matchItems[i];
-            if(matchItem != null)
+            if (matchItem != null)
                 matchItem.Id = i;
         }
 
@@ -52,8 +68,78 @@ public class GameManager : Singleton<GameManager>
         ShuffleMatchItems();
         ClearGrid();
 
+        for (int i = 0; i < m_matchItemsCopy.Count; i++)
+        {
+            var matchItem = m_matchItemsCopy[i];
 
+            var matchItemUIClone = Instantiate(itemUIPb, Vector3.zero, Quaternion.identity);
+            matchItemUIClone.transform.SetParent(gridRoot);
+            matchItemUIClone.transform.localPosition = Vector3.zero;
+            matchItemUIClone.transform.localScale = Vector3.one;
+            matchItemUIClone.UpdateFirstState(matchItem.icon);
+            matchItemUIClone.Id = matchItem.Id;
+            m_matchItemUIs.Add(matchItemUIClone);
 
+            if (matchItemUIClone.btnComp) // logic khi người chơi click vào lá bài
+            {
+                matchItemUIClone.btnComp.onClick.RemoveAllListeners();
+                matchItemUIClone.btnComp.onClick.AddListener(() =>
+                {
+                    if (m_isAnswerChecking) return;
+
+                    m_answers.Add(matchItemUIClone);
+                    matchItemUIClone.OpenAnimTrigger();
+                    if (m_answers.Count == 2)
+                    {
+                        m_totalMoving++;
+                        m_isAnswerChecking = true;
+                        StartCoroutine(CheckAnswerCo());
+                    }
+
+                    matchItemUIClone.btnComp.enabled = false;
+                });
+            }
+        }
+
+    }
+
+    private IEnumerator CheckAnswerCo()
+    {
+        bool isRight = m_answers[0] != null && m_answers[1] != null
+                && m_answers[0].Id == m_answers[1].Id;
+
+        yield return new WaitForSeconds(1f);
+
+        if (m_answers != null && m_answers.Count == 2)
+        {
+            if (isRight)
+            {
+                m_rightMoving++;
+                for (int i = 0; i < m_answers.Count; i++)
+                {
+                    var answer = m_answers[i];
+                    if (answer)
+                        answer.ExplodeAnimTrigger();
+                }
+            }
+            else
+            {
+                for (int i = 0; i < m_answers.Count; i++)
+                {
+                    var answer = m_answers[i];
+                    if (answer)
+                        answer.OpenAnimTrigger();
+                }
+            }
+        }
+
+        m_answers.Clear();
+        m_isAnswerChecking = false;
+
+        if (m_rightMoving == m_totalMatchItem)
+        {
+            Debug.Log("Gameover!!");
+        }
     }
     private void ShuffleMatchItems()
     {
